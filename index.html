@@ -5,17 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minigolf Scorekort</title>
     
-    <!-- App Ikoner - UPDATERAT TILL PNG -->
-    <link rel="icon" type="image/png" href="image_96b70a.png">
-    <link rel="apple-touch-icon" href="image_96b70a.png">
+    <!-- PWA / App Manifest med explicita relativa sökvägar -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1a242a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bangolf">
+    
+    <!-- App Ikoner -->
+    <link rel="icon" type="image/png" href="./image_96b70a.png">
+    <link rel="apple-touch-icon" href="./image_96b70a.png">
     
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #1a242a;
             
-            /* Den nya bilden som bakgrund - UPDATERAT TILL PNG */
-            background-image: url('image_96b70a.png');
+            /* Bakgrundsbild */
+            background-image: url('./image_96b70a.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -27,23 +34,24 @@
             align-items: center;
             min-height: 100vh;
             overflow-x: hidden;
+            overscroll-behavior-y: none;
         }
 
-        /* Mörk toning över bakgrundsbilden så att korten poppar ut */
+        /* Mörk toning över bakgrundsbilden */
         body::before {
             content: '';
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(3px); /* Lätt suddighet för snyggare djup */
+            backdrop-filter: blur(3px);
             z-index: -1;
         }
 
         .wallet-container {
             position: relative;
-            width: 92vw;
-            max-width: 420px;
-            /* Solfjäder-höjd, anpassad för mobiler */
+            /* Smalare för att garantera att alla kort ryms på små skärmar */
+            width: 85vw; 
+            max-width: 380px;
             height: 70vh; 
             max-height: 700px;
             min-height: 500px;
@@ -59,8 +67,8 @@
             background: #ffffff;
             border-radius: 16px;
             box-shadow: -2px 8px 20px rgba(0, 0, 0, 0.4);
-            /* Rotationspunkten långt ner för en flack fjäder som ryms på skärmen */
-            transform-origin: center 180%; 
+            /* Rotationspunkten höjd något för en tajtare fjäder */
+            transform-origin: center 150%; 
             transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), 
                         z-index 0s 0.1s;
             cursor: pointer;
@@ -95,15 +103,15 @@
             transition: border-color 0.4s;
         }
 
-        /* --- TILLSTÅND: SOLFJÄDER (Mobiloptimerad vinkel, indragna och nerskalade) --- */
-        .wallet-container:not(.has-active) .card[data-index="1"] { transform: translate(-10%, 5%) rotate(-8deg) scale(0.85); z-index: 1; }
-        .wallet-container:not(.has-active) .card[data-index="2"] { transform: translate(0, 0) rotate(0deg) scale(0.9); z-index: 2; }
-        .wallet-container:not(.has-active) .card[data-index="3"] { transform: translate(10%, 5%) rotate(8deg) scale(0.85); z-index: 3; }
+        /* --- TILLSTÅND: SOLFJÄDER (Extra tajt för att garanterat passa mobil) --- */
+        .wallet-container:not(.has-active) .card[data-index="1"] { transform: translate(-6%, 2%) rotate(-6deg) scale(0.9); z-index: 1; }
+        .wallet-container:not(.has-active) .card[data-index="2"] { transform: translate(0, 0) rotate(0deg) scale(0.95); z-index: 2; }
+        .wallet-container:not(.has-active) .card[data-index="3"] { transform: translate(6%, 2%) rotate(6deg) scale(0.9); z-index: 3; }
 
         @media (hover: hover) {
-            .wallet-container:not(.has-active) .card[data-index="1"]:hover { transform: translate(-10%, -5%) rotate(-8deg) scale(0.88); z-index: 5; }
-            .wallet-container:not(.has-active) .card[data-index="2"]:hover { transform: translate(0, -10%) rotate(0deg) scale(0.93); z-index: 5; }
-            .wallet-container:not(.has-active) .card[data-index="3"]:hover { transform: translate(10%, -5%) rotate(8deg) scale(0.88); z-index: 5; }
+            .wallet-container:not(.has-active) .card[data-index="1"]:hover { transform: translate(-8%, -5%) rotate(-6deg) scale(0.92); z-index: 5; }
+            .wallet-container:not(.has-active) .card[data-index="2"]:hover { transform: translate(0, -8%) rotate(0deg) scale(0.97); z-index: 5; }
+            .wallet-container:not(.has-active) .card[data-index="3"]:hover { transform: translate(8%, -5%) rotate(6deg) scale(0.92); z-index: 5; }
         }
 
         /* --- TILLSTÅND: AKTIVT KORT (Expanderat i mitten) --- */
@@ -163,7 +171,7 @@
         .card-index.bottom-right { bottom: 16px; right: 16px; transform: rotate(180deg); }
         .card-title-center {
             top: 25px;
-            font-size: 1.15rem; /* Anpassad storlek för de nya, längre namnen */
+            font-size: 1.15rem;
             transform: translateY(0);
         }
 
@@ -185,7 +193,7 @@
             background: rgba(0,0,0,0.05);
             border: none;
             border-radius: 50%;
-            width: 44px; height: 44px; /* Optimerat för tummen */
+            width: 44px; height: 44px;
             font-size: 1.4rem;
             cursor: pointer;
             z-index: 20;
@@ -217,7 +225,6 @@
         .card.active .card-content {
             opacity: 1;
             pointer-events: auto;
-            /* Fördröjning så tabellen tonas in efter att kortet växt klart */
             transition-delay: 0.2s; 
         }
 
@@ -230,26 +237,26 @@
             backdrop-filter: blur(5px);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            table-layout: fixed; /* Optimerar cellernas bredd */
+            table-layout: fixed;
         }
         th, td {
             border-bottom: 1px solid #e5e7eb;
-            padding: 8px 2px; /* Lite mindre horisontell padding för små skärmar */
+            padding: 8px 2px;
             text-align: center;
         }
         th:first-child, td:first-child {
-            width: 40px; /* Håller Hål-kolumnen lite smalare */
+            width: 40px; 
         }
         th { font-weight: 600; color: #4b5563; }
         
         .player-input {
             width: 100%;
-            min-width: 0; /* Hindrar overflow */
+            min-width: 0;
             border: none;
             background: transparent;
             font-weight: 700;
             text-align: center;
-            font-size: 16px; /* Förhindrar zoom på iOS */
+            font-size: 16px; 
             color: #374151;
             padding: 4px;
         }
@@ -259,14 +266,13 @@
             border-radius: 4px;
         }
         
-        /* Större och tydligare inmatningsfält för mobil */
         .score-input {
             width: 44px; 
             height: 44px;
             text-align: center;
             border: 1px solid #d1d5db;
             border-radius: 6px;
-            font-size: 18px; /* Tydligare text på mobil */
+            font-size: 18px;
             font-weight: bold;
             background-color: #ffffff;
             color: #111827;
@@ -313,7 +319,7 @@
             border: none;
             border-bottom: 1px solid #9ca3af;
             background: transparent;
-            font-family: 'Brush Script MT', 'Segoe Script', cursive; /* Skrivstils-font */
+            font-family: 'Brush Script MT', 'Segoe Script', cursive; 
             font-size: 1.4rem;
             color: #1f2937;
             outline: none;
@@ -340,19 +346,16 @@
 </div>
 
 <script>
-    // Nu är det bara 2 spelare på ett kort
     const players = ["Spelare 1", "Spelare 2"];
     const numCourses = 3;
     const numHoles = 18;
 
-    // ALLA BILDER ÄR NU EXAKT .PNG 
     const cardImages = [
-        "image_9718e7.png", // Bana 1
-        "image_971888.png", // Bana 2
-        "image_97155f.png"  // Bana 3
+        "./image_9718e7.png", // Bana 1
+        "./image_971888.png", // Bana 2
+        "./image_97155f.png"  // Bana 3
     ];
 
-    // De nya namnen för respektive bana
     const courseNames = [
         "Torekov Links",
         "Mellby Seaside",
@@ -427,7 +430,6 @@
             tableHTML += `<td id="total_c${c}_p${pIndex}">0</td>`;
         });
         
-        // Lägger till signaturraderna i botten av tabellen
         tableHTML += `
             <tr class="signature-row">
                 <td colspan="${players.length + 1}">
@@ -445,7 +447,6 @@
             </tr>
         </table>`;
 
-        // Bygger upp HTML för kortet
         card.innerHTML = `
             <div class="card-background" style="background-image: url('${cardImages[c-1]}');"></div>
             
@@ -468,6 +469,19 @@
             </div>
         `;
         walletContainer.appendChild(card);
+    }
+
+    // --- PWA: Registrerar Service Worker ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker är registrerad med scope: ', registration.scope);
+                })
+                .catch(err => {
+                    console.log('ServiceWorker registrering misslyckades: ', err);
+                });
+        });
     }
 </script>
 
