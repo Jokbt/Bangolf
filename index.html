@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minigolf Scorekort</title>
+    
+    <!-- App Ikoner -->
+    <link rel="icon" type="image/jpeg" href="image_96b70a.jpg">
+    <link rel="apple-touch-icon" href="image_96b70a.jpg">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a242a;
+            
+            /* Den nya bilden som bakgrund */
+            background-image: url('image_96b70a.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Mörk toning över bakgrundsbilden så att korten poppar ut */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px); /* Lätt suddighet för snyggare djup */
+            z-index: -1;
+        }
+
+        .wallet-container {
+            position: relative;
+            width: 92vw;
+            max-width: 420px;
+            /* Solfjäder-höjd, anpassad för mobiler */
+            height: 70vh; 
+            max-height: 700px;
+            min-height: 500px;
+            margin-top: 40px;
+            perspective: 1000px;
+        }
+
+        /* Grunddesign för Korten */
+        .card {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            margin: auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: -2px 8px 20px rgba(0, 0, 0, 0.4);
+            /* Rotationspunkten långt ner för en flack fjäder som ryms på skärmen */
+            transform-origin: center 180%; 
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                        z-index 0s 0.1s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .card-background {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #374151; 
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        /* Inre linje */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 3;
+            transition: border-color 0.4s;
+        }
+
+        /* --- TILLSTÅND: SOLFJÄDER (Mobiloptimerad vinkel) --- */
+        .wallet-container:not(.has-active) .card[data-index="1"] { transform: rotate(-12deg) translateY(5px); z-index: 1; }
+        .wallet-container:not(.has-active) .card[data-index="2"] { transform: rotate(0deg) translateY(-10px); z-index: 2; }
+        .wallet-container:not(.has-active) .card[data-index="3"] { transform: rotate(12deg) translateY(5px); z-index: 3; }
+
+        @media (hover: hover) {
+            .wallet-container:not(.has-active) .card[data-index="1"]:hover { transform: rotate(-12deg) translateY(-25px); z-index: 5; }
+            .wallet-container:not(.has-active) .card[data-index="2"]:hover { transform: rotate(0deg) translateY(-30px); z-index: 5; }
+            .wallet-container:not(.has-active) .card[data-index="3"]:hover { transform: rotate(12deg) translateY(-25px); z-index: 5; }
+        }
+
+        /* --- TILLSTÅND: AKTIVT KORT (Expanderat i mitten) --- */
+        .wallet-container.has-active .card.active {
+            transform: rotate(0deg) translateY(-20px) scale(1.02);
+            z-index: 10;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            cursor: default;
+        }
+
+        .wallet-container.has-active .card.active .card-background {
+            opacity: 0.15;
+        }
+
+        .wallet-container.has-active .card.active::after {
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Gömmer de o-valda korten smidigt */
+        .wallet-container.has-active .card:not(.active) {
+            opacity: 0;
+            transform: rotate(0deg) translateY(100px) scale(0.9);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* --- TYPOGRAFI & TEXT --- */
+        .card-index, .card-title-center {
+            position: absolute;
+            z-index: 4;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.8);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .card-index {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .card-title-center {
+            width: 100%;
+            text-align: center;
+            left: 0;
+            font-weight: 800;
+            letter-spacing: 1px;
+            pointer-events: none;
+            text-transform: uppercase;
+        }
+
+        /* Placering och storlek för kortens ikoner/text */
+        .card-index { font-size: 1.4rem; }
+        .card-index.top-left { top: 16px; left: 16px; }
+        .card-index.bottom-right { bottom: 16px; right: 16px; transform: rotate(180deg); }
+        .card-title-center {
+            top: 25px;
+            font-size: 1.15rem; /* Anpassad storlek för de nya, längre namnen */
+            transform: translateY(0);
+        }
+
+        /* Färgändring när ett kort är AKTIVT */
+        .wallet-container.has-active .card.active .card-index, 
+        .wallet-container.has-active .card.active .card-title-center {
+            color: #1f2937;
+            text-shadow: none;
+        }
+
+        .suit { font-size: 1.2em; }
+
+        /* Stäng-knapp (Större på mobilen för lättare tryck) */
+        .close-btn {
+            display: none;
+            position: absolute;
+            top: 10px; 
+            right: 10px;
+            background: rgba(0,0,0,0.05);
+            border: none;
+            border-radius: 50%;
+            width: 44px; height: 44px; /* Optimerat för tummen */
+            font-size: 1.4rem;
+            cursor: pointer;
+            z-index: 20;
+            color: #374151;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            touch-action: manipulation;
+        }
+        .close-btn:hover { background: rgba(0,0,0,0.1); }
+        .card.active .close-btn { display: flex; }
+
+        /* Score-tabellen */
+        .card-content {
+            margin-top: 70px;
+            margin-bottom: 70px;
+            padding: 0 15px;
+            overflow-y: auto;
+            overflow-x: auto;
+            flex: 1;
+            color: #1f2937;
+            z-index: 5;
+            overscroll-behavior: contain;
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+            position: relative;
+        }
+        .card.active .card-content {
+            opacity: 1;
+            pointer-events: auto;
+            /* Fördröjning så tabellen tonas in efter att kortet växt klart */
+            transition-delay: 0.2s; 
+        }
+
+        /* Tabell-design */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            table-layout: fixed; /* Optimerar cellernas bredd */
+        }
+        th, td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 2px; /* Lite mindre horisontell padding för små skärmar */
+            text-align: center;
+        }
+        th:first-child, td:first-child {
+            width: 40px; /* Håller Hål-kolumnen lite smalare */
+        }
+        th { font-weight: 600; color: #4b5563; }
+        
+        .player-input {
+            width: 100%;
+            min-width: 0; /* Hindrar overflow */
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            text-align: center;
+            font-size: 16px; /* Förhindrar zoom på iOS */
+            color: #374151;
+            padding: 4px;
+        }
+        .player-input:focus {
+            outline: none;
+            background: #e5e7eb;
+            border-radius: 4px;
+        }
+        
+        /* Större och tydligare inmatningsfält för mobil */
+        .score-input {
+            width: 44px; 
+            height: 44px;
+            text-align: center;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 18px; /* Tydligare text på mobil */
+            font-weight: bold;
+            background-color: #ffffff;
+            color: #111827;
+            touch-action: manipulation;
+        }
+        .score-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        .total-row td {
+            font-weight: 800;
+            font-size: 1.2rem;
+            padding: 15px 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        /* --- SIGNATUR RADER --- */
+        .signature-row td {
+            border-bottom: none;
+            padding: 20px 15px;
+            text-align: left;
+        }
+        .signature-box {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .signature-line {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .signature-label {
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .signature-input {
+            flex: 1;
+            min-width: 0;
+            border: none;
+            border-bottom: 1px solid #9ca3af;
+            background: transparent;
+            font-family: 'Brush Script MT', 'Segoe Script', cursive; /* Skrivstils-font */
+            font-size: 1.4rem;
+            color: #1f2937;
+            outline: none;
+            padding: 0 5px;
+            border-radius: 0;
+        }
+        .signature-input:focus {
+            border-bottom-color: #3b82f6;
+        }
+
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .card-content::-webkit-scrollbar { width: 4px; height: 4px; }
+        .card-content::-webkit-scrollbar-track { background: transparent; }
+        .card-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="wallet-container" id="wallet-container">
+    <!-- Korten genereras automatiskt med Javascript -->
+</div>
+
+<script>
+    // Nu är det bara 2 spelare på ett kort
+    const players = ["Spelare 1", "Spelare 2"];
+    const numCourses = 3;
+    const numHoles = 18;
+
+    // Dina utvalda bilder (Måste ligga i samma mapp som html-filen)
+    const cardImages = [
+        "image_9718e7.png", // Bana 1
+        "image_971888.jpg", // Bana 2
+        "image_97155f.png"  // Bana 3
+    ];
+
+    // De nya namnen för respektive bana
+    const courseNames = [
+        "Torekov Links",
+        "Mellby Seaside",
+        "Båstad Parkland"
+    ];
+
+    const walletContainer = document.getElementById('wallet-container');
+
+    function activateCard(index, event) {
+        const card = document.querySelector(`.card[data-index="${index}"]`);
+        if (card.classList.contains('active')) return;
+
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        walletContainer.classList.add('has-active');
+    }
+
+    function closeCards(event) {
+        event.stopPropagation();
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        walletContainer.classList.remove('has-active');
+    }
+
+    function calculateTotal(courseIndex, playerIndex) {
+        let total = 0;
+        for (let hole = 1; hole <= numHoles; hole++) {
+            const val = document.getElementById(`c${courseIndex}_p${playerIndex}_h${hole}`).value;
+            if (val) total += parseInt(val);
+        }
+        document.getElementById(`total_c${courseIndex}_p${playerIndex}`).innerText = total;
+    }
+
+    function updatePlayerName(playerIndex, newName) {
+        for (let c = 1; c <= numCourses; c++) {
+            const input = document.getElementById(`name_c${c}_p${playerIndex}`);
+            if (input && input.value !== newName) {
+                input.value = newName;
+            }
+        }
+    }
+
+    for (let c = 1; c <= numCourses; c++) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.index = c;
+        card.onclick = (e) => activateCard(c, e);
+
+        let tableHTML = `<table>
+            <tr><th>Hål</th>`;
+        
+        players.forEach((p, pIndex) => {
+            tableHTML += `<th>
+                <input type="text" class="player-input" id="name_c${c}_p${pIndex}" value="${p}" 
+                       oninput="updatePlayerName(${pIndex}, this.value)">
+            </th>`;
+        });
+        tableHTML += `</tr>`;
+
+        for (let h = 1; h <= numHoles; h++) {
+            tableHTML += `<tr><td><strong>${h}</strong></td>`;
+            players.forEach((p, pIndex) => {
+                tableHTML += `<td>
+                    <input type="number" class="score-input" id="c${c}_p${pIndex}_h${h}" min="1" max="7" 
+                           oninput="calculateTotal(${c}, ${pIndex})">
+                </td>`;
+            });
+            tableHTML += `</tr>`;
+        }
+
+        tableHTML += `<tr class="total-row"><td>S:a</td>`;
+        players.forEach((p, pIndex) => {
+            tableHTML += `<td id="total_c${c}_p${pIndex}">0</td>`;
+        });
+        
+        // Lägger till signaturraderna i botten av tabellen
+        tableHTML += `
+            <tr class="signature-row">
+                <td colspan="${players.length + 1}">
+                    <div class="signature-box">
+                        <div class="signature-line">
+                            <span class="signature-label">Spelare:</span>
+                            <input type="text" class="signature-input" placeholder="">
+                        </div>
+                        <div class="signature-line">
+                            <span class="signature-label">Markör:</span>
+                            <input type="text" class="signature-input" placeholder="">
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>`;
+
+        // Bygger upp HTML för kortet
+        card.innerHTML = `
+            <div class="card-background" style="background-image: url('${cardImages[c-1]}');"></div>
+            
+            <button class="close-btn" onclick="closeCards(event)" aria-label="Stäng">✕</button>
+            
+            <div class="card-index top-left">
+                <span>${c}</span>
+                <span class="suit">⛳</span>
+            </div>
+            
+            <div class="card-title-center">${courseNames[c-1]}</div>
+            
+            <div class="card-index bottom-right">
+                <span>${c}</span>
+                <span class="suit">⛳</span>
+            </div>
+
+            <div class="card-content" onclick="event.stopPropagation()">
+                ${tableHTML}
+            </div>
+        `;
+        walletContainer.appendChild(card);
+    }
+</script>
+
+</body>
+</html>
