@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bangolf-app-v2';
+const CACHE_NAME = 'bangolf-app-v3';
 
 // UPDATERAT TILL BARA PNG-FILER
 const urlsToCache = [
