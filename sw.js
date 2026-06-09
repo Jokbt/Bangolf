@@ -1,4 +1,5 @@
-const CACHE_NAME = 'bangolf-app-v4';
+// Uppdaterad till V6 för att tvinga mobilen att hämta ny information!
+const CACHE_NAME = 'bangolf-app-v6';
 
 const urlsToCache = [
   './',

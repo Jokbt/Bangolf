@@ -5,16 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minigolf Scorekort</title>
     
-    <!-- PWA / App Manifest med explicita relativa sökvägar -->
+    <!-- PWA / App Manifest med tvingande relativa sökvägar -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#1a242a">
+    
+    <!-- Apple / iOS specifika inställningar för App-känsla -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Bangolf">
     
-    <!-- App Ikoner -->
-    <link rel="icon" type="image/png" href="./image_96b70a.png">
-    <link rel="apple-touch-icon" href="./image_96b70a.png">
+    <!-- App Ikoner med tvingande ./ -->
+    <link rel="apple-touch-icon" sizes="180x180" href="./image_96b70a.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./image_96b70a.png">
     
     <style>
         body {
@@ -31,9 +34,9 @@
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: center; 
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden; /* Förhindrar att sidan kan scrollas och dras åt sidan */
             overscroll-behavior-y: none;
         }
 
@@ -49,28 +52,31 @@
 
         .wallet-container {
             position: relative;
-            /* Smalare för att garantera att alla kort ryms på små skärmar */
-            width: 85vw; 
-            max-width: 380px;
-            height: 70vh; 
-            max-height: 700px;
-            min-height: 500px;
-            margin-top: 40px;
+            /* Justerad container för att hålla korten på plats på små skärmar */
+            width: 100vw; 
+            height: 60vh; /* Mindre höjd för att få plats */
+            min-height: 450px;
+            max-height: 600px;
+            display: flex;
+            justify-content: center;
             perspective: 1000px;
         }
 
-        /* Grunddesign för Korten */
+        /* Grunddesign för Korten - Garanterad att få plats */
         .card {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            margin: auto;
+            top: 0; bottom: 0;
+            width: 85vw; /* Max 85% av skärmens bredd */
+            max-width: 320px; /* Aldrig bredare än 320px */
+            
             background: #ffffff;
             border-radius: 16px;
             box-shadow: -2px 8px 20px rgba(0, 0, 0, 0.4);
-            /* Rotationspunkten höjd något för en tajtare fjäder */
-            transform-origin: center 150%; 
+            
+            /* Rotationspunkten är strax under kortet = tajt och fin solfjäder */
+            transform-origin: 50% 120%; 
             transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                        z-index 0s 0.1s;
+                        z-index 0s 0.1s, opacity 0.3s;
             cursor: pointer;
             display: flex;
             flex-direction: column;
@@ -103,22 +109,16 @@
             transition: border-color 0.4s;
         }
 
-        /* --- TILLSTÅND: SOLFJÄDER (Extra tajt för att garanterat passa mobil) --- */
-        .wallet-container:not(.has-active) .card[data-index="1"] { transform: translate(-6%, 2%) rotate(-6deg) scale(0.9); z-index: 1; }
-        .wallet-container:not(.has-active) .card[data-index="2"] { transform: translate(0, 0) rotate(0deg) scale(0.95); z-index: 2; }
-        .wallet-container:not(.has-active) .card[data-index="3"] { transform: translate(6%, 2%) rotate(6deg) scale(0.9); z-index: 3; }
-
-        @media (hover: hover) {
-            .wallet-container:not(.has-active) .card[data-index="1"]:hover { transform: translate(-8%, -5%) rotate(-6deg) scale(0.92); z-index: 5; }
-            .wallet-container:not(.has-active) .card[data-index="2"]:hover { transform: translate(0, -8%) rotate(0deg) scale(0.97); z-index: 5; }
-            .wallet-container:not(.has-active) .card[data-index="3"]:hover { transform: translate(8%, -5%) rotate(6deg) scale(0.92); z-index: 5; }
-        }
+        /* --- TILLSTÅND: SOLFJÄDER --- */
+        .wallet-container:not(.has-active) .card[data-index="1"] { transform: rotate(-8deg); z-index: 1; }
+        .wallet-container:not(.has-active) .card[data-index="2"] { transform: rotate(0deg) translateY(-15px); z-index: 2; }
+        .wallet-container:not(.has-active) .card[data-index="3"] { transform: rotate(8deg); z-index: 3; }
 
         /* --- TILLSTÅND: AKTIVT KORT (Expanderat i mitten) --- */
         .wallet-container.has-active .card.active {
-            transform: translate(0, -15px) rotate(0deg) scale(1);
-            z-index: 10;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            transform: rotate(0deg) translateY(-20px) scale(1.05);
+            z-index: 20;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
             cursor: default;
         }
 
@@ -130,10 +130,10 @@
             border-color: rgba(0, 0, 0, 0.1);
         }
 
-        /* Gömmer de o-valda korten smidigt */
+        /* Gömmer de o-valda korten smidigt nedåt */
         .wallet-container.has-active .card:not(.active) {
             opacity: 0;
-            transform: rotate(0deg) translateY(100px) scale(0.9);
+            transform: rotate(0deg) translateY(200px);
             pointer-events: none;
             z-index: 1;
         }
@@ -165,17 +165,11 @@
             text-transform: uppercase;
         }
 
-        /* Placering och storlek för kortens ikoner/text */
-        .card-index { font-size: 1.4rem; }
-        .card-index.top-left { top: 16px; left: 16px; }
-        .card-index.bottom-right { bottom: 16px; right: 16px; transform: rotate(180deg); }
-        .card-title-center {
-            top: 25px;
-            font-size: 1.15rem;
-            transform: translateY(0);
-        }
+        .card-index { font-size: 1.2rem; }
+        .card-index.top-left { top: 12px; left: 12px; }
+        .card-index.bottom-right { bottom: 12px; right: 12px; transform: rotate(180deg); }
+        .card-title-center { top: 22px; font-size: 1.1rem; }
 
-        /* Färgändring när ett kort är AKTIVT */
         .wallet-container.has-active .card.active .card-index, 
         .wallet-container.has-active .card.active .card-title-center {
             color: #1f2937;
@@ -184,7 +178,7 @@
 
         .suit { font-size: 1.2em; }
 
-        /* Stäng-knapp (Större på mobilen för lättare tryck) */
+        /* Stäng-knapp */
         .close-btn {
             display: none;
             position: absolute;
@@ -193,8 +187,8 @@
             background: rgba(0,0,0,0.05);
             border: none;
             border-radius: 50%;
-            width: 44px; height: 44px;
-            font-size: 1.4rem;
+            width: 40px; height: 40px;
+            font-size: 1.2rem;
             cursor: pointer;
             z-index: 20;
             color: #374151;
@@ -208,9 +202,9 @@
 
         /* Score-tabellen */
         .card-content {
-            margin-top: 70px;
-            margin-bottom: 70px;
-            padding: 0 15px;
+            margin-top: 60px;
+            margin-bottom: 60px;
+            padding: 0 10px;
             overflow-y: auto;
             overflow-x: auto;
             flex: 1;
@@ -232,7 +226,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(5px);
             border-radius: 8px;
@@ -241,12 +235,10 @@
         }
         th, td {
             border-bottom: 1px solid #e5e7eb;
-            padding: 8px 2px;
+            padding: 6px 2px;
             text-align: center;
         }
-        th:first-child, td:first-child {
-            width: 40px; 
-        }
+        th:first-child, td:first-child { width: 35px; }
         th { font-weight: 600; color: #4b5563; }
         
         .player-input {
@@ -256,63 +248,36 @@
             background: transparent;
             font-weight: 700;
             text-align: center;
-            font-size: 16px; 
+            font-size: 15px; 
             color: #374151;
-            padding: 4px;
-        }
-        .player-input:focus {
-            outline: none;
-            background: #e5e7eb;
-            border-radius: 4px;
+            padding: 2px;
         }
         
         .score-input {
-            width: 44px; 
-            height: 44px;
+            width: 38px; 
+            height: 38px;
             text-align: center;
             border: 1px solid #d1d5db;
             border-radius: 6px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             background-color: #ffffff;
             color: #111827;
             touch-action: manipulation;
         }
-        .score-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
-        }
 
         .total-row td {
             font-weight: 800;
-            font-size: 1.2rem;
-            padding: 15px 4px;
+            font-size: 1.1rem;
+            padding: 12px 4px;
             border-bottom: 1px solid #e5e7eb;
         }
 
         /* --- SIGNATUR RADER --- */
-        .signature-row td {
-            border-bottom: none;
-            padding: 20px 15px;
-            text-align: left;
-        }
-        .signature-box {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .signature-line {
-            display: flex;
-            align-items: flex-end;
-            gap: 10px;
-        }
-        .signature-label {
-            font-weight: 600;
-            color: #4b5563;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
+        .signature-row td { border-bottom: none; padding: 15px 10px; text-align: left; }
+        .signature-box { display: flex; flex-direction: column; gap: 10px; }
+        .signature-line { display: flex; align-items: flex-end; gap: 8px; }
+        .signature-label { font-weight: 600; color: #4b5563; font-size: 0.85rem; }
         .signature-input {
             flex: 1;
             min-width: 0;
@@ -320,14 +285,11 @@
             border-bottom: 1px solid #9ca3af;
             background: transparent;
             font-family: 'Brush Script MT', 'Segoe Script', cursive; 
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             color: #1f2937;
             outline: none;
             padding: 0 5px;
             border-radius: 0;
-        }
-        .signature-input:focus {
-            border-bottom-color: #3b82f6;
         }
 
         input[type=number]::-webkit-outer-spin-button,
@@ -350,6 +312,7 @@
     const numCourses = 3;
     const numHoles = 18;
 
+    // Tvingar appen att leta i rätt mapp mha ./
     const cardImages = [
         "./image_9718e7.png", // Bana 1
         "./image_971888.png", // Bana 2

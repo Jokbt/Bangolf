@@ -2,7 +2,7 @@
   "name": "Bangolf Scorekort",
   "short_name": "Bangolf",
   "description": "Digitalt scorekort",
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a242a",
   "theme_color": "#1a242a",
@@ -11,12 +11,14 @@
     {
       "src": "./image_96b70a.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "./image_96b70a.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
