@@ -2,11 +2,11 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Minigolf Scorekort</title>
     
-    <!-- PWA / App Manifest med tvingande relativa sökvägar -->
-    <link rel="manifest" href="./manifest.json">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a242a">
     
     <!-- Apple / iOS specifika inställningar för App-känsla -->
@@ -15,66 +15,69 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Bangolf">
     
-    <!-- App Ikoner med tvingande ./ -->
-    <link rel="apple-touch-icon" sizes="180x180" href="./image_96b70a.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="./image_96b70a.png">
+    <!-- App Ikoner (Inga punkter före länkarna) -->
+    <link rel="apple-touch-icon" href="image_96b70a.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="image_96b70a.png">
     
     <style>
-        body {
+        /* Hård låsning av body så att den beter sig som en app och inte en webbsida */
+        html, body {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #1a242a;
-            
-            /* Bakgrundsbild */
-            background-image: url('./image_96b70a.png');
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Bakgrundsbild */
+        .bg-image {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('image_96b70a.png');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
-            
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center; 
-            min-height: 100vh;
-            overflow: hidden; /* Förhindrar att sidan kan scrollas och dras åt sidan */
-            overscroll-behavior-y: none;
+            z-index: -2;
         }
 
         /* Mörk toning över bakgrundsbilden */
-        body::before {
-            content: '';
-            position: fixed;
+        .bg-overlay {
+            position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(3px);
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             z-index: -1;
         }
 
         .wallet-container {
             position: relative;
-            /* Justerad container för att hålla korten på plats på små skärmar */
-            width: 100vw; 
-            height: 60vh; /* Mindre höjd för att få plats */
-            min-height: 450px;
-            max-height: 600px;
+            width: 100%; 
+            height: 100%;
             display: flex;
             justify-content: center;
-            perspective: 1000px;
+            align-items: center;
+            perspective: 1200px;
         }
 
-        /* Grunddesign för Korten - Garanterad att få plats */
+        /* ROCK SOLID KORT-LAYOUT - Fast bredd hindrar dem från att hamna utanför skärmen */
         .card {
             position: absolute;
-            top: 0; bottom: 0;
-            width: 85vw; /* Max 85% av skärmens bredd */
-            max-width: 320px; /* Aldrig bredare än 320px */
+            width: 280px; /* Perfekt storlek som ryms på alla smartphones */
+            height: 480px;
+            /* Explicit centrering: Placerar mitten av kortet exakt i mitten av skärmen */
+            left: 50%;
+            margin-left: -140px; 
+            top: 50%;
+            margin-top: -240px;
             
             background: #ffffff;
             border-radius: 16px;
-            box-shadow: -2px 8px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             
-            /* Rotationspunkten är strax under kortet = tajt och fin solfjäder */
-            transform-origin: 50% 120%; 
+            transform-origin: center 130%; /* Rotationspunkten */
             transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), 
                         z-index 0s 0.1s, opacity 0.3s;
             cursor: pointer;
@@ -90,7 +93,7 @@
         .card-background {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #374151; 
+            background-color: #2c3e50; /* Snygg reservfärg om bilden inte hittas */
             background-size: cover;
             background-position: center;
             z-index: 0;
@@ -102,38 +105,33 @@
             content: '';
             position: absolute;
             top: 8px; left: 8px; right: 8px; bottom: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
             pointer-events: none;
             z-index: 3;
             transition: border-color 0.4s;
         }
 
         /* --- TILLSTÅND: SOLFJÄDER --- */
-        .wallet-container:not(.has-active) .card[data-index="1"] { transform: rotate(-8deg); z-index: 1; }
-        .wallet-container:not(.has-active) .card[data-index="2"] { transform: rotate(0deg) translateY(-15px); z-index: 2; }
-        .wallet-container:not(.has-active) .card[data-index="3"] { transform: rotate(8deg); z-index: 3; }
+        .wallet-container:not(.has-active) .card[data-index="1"] { transform: rotate(-10deg) translateY(10px); z-index: 1; }
+        .wallet-container:not(.has-active) .card[data-index="2"] { transform: rotate(0deg) translateY(-5px); z-index: 2; }
+        .wallet-container:not(.has-active) .card[data-index="3"] { transform: rotate(10deg) translateY(10px); z-index: 3; }
 
         /* --- TILLSTÅND: AKTIVT KORT (Expanderat i mitten) --- */
         .wallet-container.has-active .card.active {
-            transform: rotate(0deg) translateY(-20px) scale(1.05);
+            transform: rotate(0deg) translateY(0) scale(1.05);
             z-index: 20;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
             cursor: default;
         }
 
-        .wallet-container.has-active .card.active .card-background {
-            opacity: 0.15;
-        }
-
-        .wallet-container.has-active .card.active::after {
-            border-color: rgba(0, 0, 0, 0.1);
-        }
+        .wallet-container.has-active .card.active .card-background { opacity: 0.15; }
+        .wallet-container.has-active .card.active::after { border-color: rgba(0, 0, 0, 0.1); }
 
         /* Gömmer de o-valda korten smidigt nedåt */
         .wallet-container.has-active .card:not(.active) {
             opacity: 0;
-            transform: rotate(0deg) translateY(200px);
+            transform: rotate(0deg) translateY(300px);
             pointer-events: none;
             z-index: 1;
         }
@@ -153,6 +151,7 @@
             align-items: center;
             font-weight: 800;
             line-height: 1.1;
+            font-size: 1.2rem;
         }
 
         .card-title-center {
@@ -163,12 +162,12 @@
             letter-spacing: 1px;
             pointer-events: none;
             text-transform: uppercase;
+            top: 25px; 
+            font-size: 1.1rem;
         }
 
-        .card-index { font-size: 1.2rem; }
         .card-index.top-left { top: 12px; left: 12px; }
         .card-index.bottom-right { bottom: 12px; right: 12px; transform: rotate(180deg); }
-        .card-title-center { top: 22px; font-size: 1.1rem; }
 
         .wallet-container.has-active .card.active .card-index, 
         .wallet-container.has-active .card.active .card-title-center {
@@ -182,13 +181,13 @@
         .close-btn {
             display: none;
             position: absolute;
-            top: 10px; 
-            right: 10px;
+            top: 8px; 
+            right: 8px;
             background: rgba(0,0,0,0.05);
             border: none;
             border-radius: 50%;
             width: 40px; height: 40px;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             cursor: pointer;
             z-index: 20;
             color: #374151;
@@ -229,13 +228,14 @@
             font-size: 0.9rem;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             table-layout: fixed;
         }
         th, td {
             border-bottom: 1px solid #e5e7eb;
-            padding: 6px 2px;
+            padding: 4px 2px;
             text-align: center;
         }
         th:first-child, td:first-child { width: 35px; }
@@ -248,7 +248,7 @@
             background: transparent;
             font-weight: 700;
             text-align: center;
-            font-size: 15px; 
+            font-size: 14px; 
             color: #374151;
             padding: 2px;
         }
@@ -303,6 +303,9 @@
 </head>
 <body>
 
+<div class="bg-image"></div>
+<div class="bg-overlay"></div>
+
 <div class="wallet-container" id="wallet-container">
     <!-- Korten genereras automatiskt med Javascript -->
 </div>
@@ -312,11 +315,11 @@
     const numCourses = 3;
     const numHoles = 18;
 
-    // Tvingar appen att leta i rätt mapp mha ./
+    // Enkla, direkta länkar till bilderna
     const cardImages = [
-        "./image_9718e7.png", // Bana 1
-        "./image_971888.png", // Bana 2
-        "./image_97155f.png"  // Bana 3
+        "image_9718e7.png", // Bana 1
+        "image_971888.png", // Bana 2
+        "image_97155f.png"  // Bana 3
     ];
 
     const courseNames = [
@@ -437,7 +440,7 @@
     // --- PWA: Registrerar Service Worker ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('sw.js')
                 .then(registration => {
                     console.log('ServiceWorker är registrerad med scope: ', registration.scope);
                 })

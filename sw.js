@@ -1,48 +1,30 @@
-const CACHE_NAME = 'bangolf-app-v7';
+const CACHE_NAME = 'bangolf-v8';
 
-// Vi cachar bara grundfilerna här för att garantera att installationen lyckas
-const urlsToCache = [
-  './',
-  'index.html',
-  'manifest.json'
-];
-
+// Denna nya version laddar ALLTID från nätet först (Network First).
+// Då slipper du problemet med att gamla "vita" ikoner spökar!
 self.addEventListener('install', event => {
-  // Tvingar den nya uppdateringen att ta över direkt
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
 });
 
 self.addEventListener('activate', event => {
-  // MAGIN: Detta raderar alla gamla, trasiga versioner från telefonens minne!
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Rensar gammal cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      })
+    ))
   );
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-  // Hämtar från cache först, annars från nätet (och sparar bilden automatiskt när den laddats)
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request).then(fetchRes => {
-        return caches.open(CACHE_NAME).then(cache => {
-          if (event.request.url.startsWith('http')) {
-            cache.put(event.request, fetchRes.clone());
-          }
-          return fetchRes;
-        });
-      });
-    })
+    fetch(event.request)
+      .then(response => {
+        const resClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
