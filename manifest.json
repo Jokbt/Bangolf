@@ -9,12 +9,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "image_96b70a.png",
+      "src": "https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "image_96b70a.png",
+      "src": "https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true",
       "sizes": "512x512",
       "type": "image/png"
     }
