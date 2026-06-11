@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minigolf Scorekort</title>
     
+    <!-- App Ikoner med direkta länkar -->
+    <link rel="apple-touch-icon" sizes="180x180" href="https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true">
+    
     <style>
         /* Hård låsning av bakgrunden */
         html, body {
@@ -20,8 +24,8 @@
         .bg-image {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            /* CACHE-BUSTER: ?v=2 tvingar webbläsaren att hämta bilden på nytt */
-            background-image: url('image_96b70a.png?v=2');
+            /* Direktlänk till bakgrundsbilden */
+            background-image: url('https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true');
             background-size: cover;
             background-position: center;
             z-index: -2;
@@ -278,11 +282,11 @@
     const numCourses = 3;
     const numHoles = 18;
 
-    // CACHE-BUSTER: ?v=2 lurar GitHub och Safari att ladda ner bilderna som nya filer!
+    // DIREKTLÄNKAR TILL GITHUB (Bypass av alla sökvägsproblem)
     const cardImages = [
-        "image_9718e7.png?v=2", 
-        "image_971888.png?v=2", 
-        "image_97155f.png?v=2"  
+        "https://github.com/Jokbt/Bangolf/blob/main/image_9718e7.PNG?raw=true", 
+        "https://github.com/Jokbt/Bangolf/blob/main/image_971888.PNG?raw=true", 
+        "https://github.com/Jokbt/Bangolf/blob/main/image_97155f.PNG?raw=true"  
     ];
 
     const courseNames = [
