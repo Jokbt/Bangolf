@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minigolf Scorekort</title>
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a242a">
+    
     <!-- App Ikoner med direkta länkar -->
     <link rel="apple-touch-icon" sizes="180x180" href="https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true">
     <link rel="icon" type="image/png" sizes="192x192" href="https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true">
@@ -259,24 +263,14 @@
 </div>
 
 <script>
-    // --- LÖSNING PÅ "InvalidStateError" ---
-    // Genom att lägga detta inuti 'load'-eventet förhindrar vi kraschen.
-    window.addEventListener('load', function() {
-        try {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for(let registration of registrations) {
-                        registration.unregister();
-                        console.log('Raderade gammal störande app-data.');
-                    }
-                }).catch(function(error) {
-                    console.log('Kunde inte rensa service workers:', error);
-                });
-            }
-        } catch (e) {
-            console.log('Ogiltigt tillstånd för ServiceWorker fångades säkert.');
-        }
-    });
+    // --- PWA: Registrerar Service Worker för installation ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => console.log('ServiceWorker för PWA är registrerad.'))
+                .catch(err => console.log('Fel vid PWA registrering:', err));
+        });
+    }
 
     const players = ["Spelare 1", "Spelare 2"];
     const numCourses = 3;
@@ -297,7 +291,23 @@
 
     const walletContainer = document.getElementById('wallet-container');
 
+    // Lyssna på klick var som helst på hela sidan
+    document.addEventListener('click', function(e) {
+        const hasActiveCard = walletContainer.classList.contains('has-active');
+        if (hasActiveCard) {
+            // Kontrollera om klicket skedde INUTI ett kort
+            const clickedInsideCard = e.target.closest('.card');
+            // Om vi klickade utanför (t.ex. på bakgrunden), stäng korten
+            if (!clickedInsideCard) {
+                closeCards(e);
+            }
+        }
+    });
+
     function activateCard(index, event) {
+        // Stoppar klicket från att bubbla upp till dokumentet och trigga stängningen direkt
+        if (event) event.stopPropagation();
+
         const card = document.querySelector(`.card[data-index="${index}"]`);
         if (card.classList.contains('active')) return;
 
