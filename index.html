@@ -304,14 +304,15 @@
 
     // Lyssna på klick var som helst på hela sidan
     document.addEventListener('click', function(e) {
-        const hasActiveCard = walletContainer.classList.contains('has-active');
-        if (hasActiveCard) {
-            // Kontrollera om klicket skedde INUTI ett kort
-            const clickedInsideCard = e.target.closest('.card');
-            // Om vi klickade utanför (t.ex. på bakgrunden), stäng korten
-            if (!clickedInsideCard) {
-                closeCards(e);
-            }
+        // Kontrollera om klicket skedde INUTI ett kort
+        const clickedInsideCard = e.target.closest('.card');
+        
+        // Om vi klickade utanför (t.ex. på bakgrunden), stäng korten och avmarkera solfjädern
+        if (!clickedInsideCard) {
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('active', 'front');
+            });
+            walletContainer.classList.remove('has-active');
         }
     });
 
@@ -468,17 +469,15 @@
             isFullyOpen = false;
         }
 
-        if (!currentCard) return;
-
-        let currentIndex = parseInt(currentCard.getAttribute('data-index'));
+        let currentIndex = currentCard ? parseInt(currentCard.getAttribute('data-index')) : 0;
         let nextIndex = currentIndex;
 
         if (diff > 0) {
             // Svep Vänster -> Byt till NÄSTA kort
-            nextIndex = (currentIndex % numCourses) + 1;
+            nextIndex = currentCard ? (currentIndex % numCourses) + 1 : 1;
         } else {
             // Svep Höger -> Byt till FÖREGÅENDE kort
-            nextIndex = currentIndex - 1;
+            nextIndex = currentCard ? currentIndex - 1 : numCourses;
             if (nextIndex < 1) nextIndex = numCourses;
         }
 
@@ -490,7 +489,7 @@
         });
 
         // Applicera rätt läge på det nya kortet beroende på vad vi gjorde
-        if (isFullyOpen) {
+        if (isFullyOpen && currentCard) {
             nextCard.classList.add('active');
             walletContainer.classList.add('has-active');
         } else {
