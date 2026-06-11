@@ -67,7 +67,8 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             
             transform-origin: center 130%; 
-            transition: transform 0.4s ease, opacity 0.3s ease;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                        z-index 0.4s, opacity 0.3s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
@@ -96,13 +97,20 @@
         }
 
         /* --- SOLFJÄDER LÄGE --- */
-        .wallet-container:not(.has-active) .card[data-index="1"] { transform: rotate(-12deg) translateY(15px); z-index: 1; }
-        .wallet-container:not(.has-active) .card[data-index="2"] { transform: rotate(0deg) translateY(0); z-index: 2; }
-        .wallet-container:not(.has-active) .card[data-index="3"] { transform: rotate(12deg) translateY(15px); z-index: 3; }
+        /* Korten är nu isärdragna i sidled (translate X) för att göra dem mer tillgängliga */
+        .wallet-container:not(.has-active) .card[data-index="1"] { transform: translate(-30px, 15px) rotate(-12deg); z-index: 1; }
+        .wallet-container:not(.has-active) .card[data-index="2"] { transform: translate(0, 0) rotate(0deg); z-index: 2; }
+        .wallet-container:not(.has-active) .card[data-index="3"] { transform: translate(30px, 15px) rotate(12deg); z-index: 3; }
 
-        /* --- AKTIVT KORT (Mitten) --- */
+        /* --- FOKUSERAT KORT (Ligger överst i solfjädern) --- */
+        /* Det valda kortet lyfts nu mycket högre upp (-30px) för att tydligt visa de andra korten */
+        .wallet-container:not(.has-active) .card[data-index="1"].front { transform: translate(-30px, -30px) rotate(-12deg) scale(1.05); z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+        .wallet-container:not(.has-active) .card[data-index="2"].front { transform: translate(0, -35px) rotate(0deg) scale(1.05); z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+        .wallet-container:not(.has-active) .card[data-index="3"].front { transform: translate(30px, -30px) rotate(12deg) scale(1.05); z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+
+        /* --- AKTIVT KORT (Scorekort öppet) --- */
         .wallet-container.has-active .card.active {
-            transform: rotate(0deg) translateY(-10px) scale(1.05);
+            transform: translate(0, -10px) scale(1.05);
             z-index: 20;
             box-shadow: 0 15px 40px rgba(0,0,0,0.8);
             cursor: default;
@@ -188,6 +196,7 @@
         .card.active .card-content {
             opacity: 1;
             pointer-events: auto;
+            transition-delay: 0.2s;
         }
 
         table {
@@ -309,15 +318,25 @@
         if (event) event.stopPropagation();
 
         const card = document.querySelector(`.card[data-index="${index}"]`);
+        
+        // Om kortet redan är helt öppet (scorekort visas), gör inget.
         if (card.classList.contains('active')) return;
 
+        // Om kortet INTE ligger överst ("front") i solfjädern, flytta upp det.
+        if (!card.classList.contains('front')) {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('front'));
+            card.classList.add('front');
+            return; // Avbryt här, vänta på nästa klick för att öppna!
+        }
+
+        // Om kortet redan ligger överst (.front), ÖPPNA scorekortet.
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         walletContainer.classList.add('has-active');
     }
 
     function closeCards(event) {
-        event.stopPropagation();
+        if (event) event.stopPropagation();
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         walletContainer.classList.remove('has-active');
     }
@@ -344,6 +363,12 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.dataset.index = c;
+        
+        // Lägger kort 3 (det översta rent visuellt) i .front-läge från start
+        if (c === 3) {
+            card.classList.add('front');
+        }
+
         card.onclick = (e) => activateCard(c, e);
 
         let tableHTML = `<table>
@@ -410,6 +435,66 @@
             </div>
         `;
         walletContainer.appendChild(card);
+    }
+
+    // --- SWIPE FUNKTION ---
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, {passive: true});
+
+    document.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, {passive: true});
+
+    function handleSwipe() {
+        const swipeThreshold = 60; // Tröskel för hur långt fingret måste dras (i pixlar)
+        const diff = touchStartX - touchEndX;
+
+        // Ignorera om svepet var för kort (förhindrar att vanliga klick misstolkas)
+        if (Math.abs(diff) < swipeThreshold) return;
+
+        // Hitta vilket kort som är i fokus (antingen helt öppet eller upplyft i solfjädern)
+        let currentCard = document.querySelector('.card.active');
+        let isFullyOpen = true;
+
+        if (!currentCard) {
+            currentCard = document.querySelector('.card.front');
+            isFullyOpen = false;
+        }
+
+        if (!currentCard) return;
+
+        let currentIndex = parseInt(currentCard.getAttribute('data-index'));
+        let nextIndex = currentIndex;
+
+        if (diff > 0) {
+            // Svep Vänster -> Byt till NÄSTA kort
+            nextIndex = (currentIndex % numCourses) + 1;
+        } else {
+            // Svep Höger -> Byt till FÖREGÅENDE kort
+            nextIndex = currentIndex - 1;
+            if (nextIndex < 1) nextIndex = numCourses;
+        }
+
+        const nextCard = document.querySelector(`.card[data-index="${nextIndex}"]`);
+        
+        // Återställ först alla kort till sina standardlägen
+        document.querySelectorAll('.card').forEach(c => {
+            c.classList.remove('active', 'front');
+        });
+
+        // Applicera rätt läge på det nya kortet beroende på vad vi gjorde
+        if (isFullyOpen) {
+            nextCard.classList.add('active');
+            walletContainer.classList.add('has-active');
+        } else {
+            nextCard.classList.add('front');
+            walletContainer.classList.remove('has-active');
+        }
     }
 </script>
 
