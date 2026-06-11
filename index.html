@@ -20,7 +20,8 @@
         .bg-image {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-image: url('image_96b70a.png');
+            /* CACHE-BUSTER: ?v=2 tvingar webbläsaren att hämta bilden på nytt */
+            background-image: url('image_96b70a.png?v=2');
             background-size: cover;
             background-position: center;
             z-index: -2;
@@ -29,7 +30,7 @@
         .bg-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7); /* Mörkare för att korten ska synas bra */
+            background: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
             z-index: -1;
@@ -50,8 +51,8 @@
             /* Exakt centrering av kortet i mitten av skärmen */
             top: 50%;
             left: 50%;
-            margin-top: -220px; /* Hälften av höjden */
-            margin-left: -130px; /* Hälften av bredden */
+            margin-top: -220px; 
+            margin-left: -130px; 
             
             background: #2c3e50;
             border-radius: 14px;
@@ -164,7 +165,7 @@
         }
         .card.active .close-btn { display: flex; }
 
-        /* Score-tabellen (Krympt för att passa 260px) */
+        /* Score-tabellen */
         .card-content {
             margin-top: 55px;
             margin-bottom: 50px;
@@ -184,7 +185,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.8rem; /* Liten text */
+            font-size: 0.8rem; 
             background: rgba(255, 255, 255, 0.9);
             border-radius: 6px;
         }
@@ -254,32 +255,34 @@
 </div>
 
 <script>
-    // --- SKOTTSÄKER FIX FÖR ATT RADERA GAMLA OFFLINE-APPAR ---
-    // Denna kod tvingar webbläsaren att avregistrera gamla felaktiga service workers direkt.
-    try {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                    console.log('Raderade gammal störande app-data.');
-                }
-            }).catch(function(error) {
-                console.log('Kunde inte rensa service workers pga sandbox-miljö:', error);
-            });
+    // --- LÖSNING PÅ "InvalidStateError" ---
+    // Genom att lägga detta inuti 'load'-eventet förhindrar vi kraschen.
+    window.addEventListener('load', function() {
+        try {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                        console.log('Raderade gammal störande app-data.');
+                    }
+                }).catch(function(error) {
+                    console.log('Kunde inte rensa service workers:', error);
+                });
+            }
+        } catch (e) {
+            console.log('Ogiltigt tillstånd för ServiceWorker fångades säkert.');
         }
-    } catch (e) {
-        console.log('Kunde inte komma åt ServiceWorker-registreringar i denna miljö.');
-    }
+    });
 
     const players = ["Spelare 1", "Spelare 2"];
     const numCourses = 3;
     const numHoles = 18;
 
-    // Länkar direkt till filnamnen
+    // CACHE-BUSTER: ?v=2 lurar GitHub och Safari att ladda ner bilderna som nya filer!
     const cardImages = [
-        "image_9718e7.png", 
-        "image_971888.png", 
-        "image_97155f.png"  
+        "image_9718e7.png?v=2", 
+        "image_971888.png?v=2", 
+        "image_97155f.png?v=2"  
     ];
 
     const courseNames = [
@@ -371,7 +374,6 @@
             </tr>
         </table>`;
 
-        // Använder <img> taggar igen för att tvinga fram bilderna
         card.innerHTML = `
             <img class="card-img" src="${cardImages[c-1]}" alt="Bana ${c}" onerror="this.style.display='none'">
             
