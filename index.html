@@ -2,7 +2,8 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Lade till viewport-fit=cover för att ta bort vita kanter på moderna mobiler -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Minigolf Scorekort</title>
     
     <!-- PWA Manifest -->
@@ -14,11 +15,13 @@
     <link rel="icon" type="image/png" sizes="192x192" href="https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true">
     
     <style>
-        /* Hård låsning av bakgrunden */
+        /* Hård låsning av bakgrunden och fix för den vita linjen */
         html, body {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%; height: 100%;
+            width: 100vw; 
+            height: 100vh;
+            height: 100dvh; /* Dynamisk höjd täcker hela skärmen inkl. "safe areas" */
             margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #1a242a;
@@ -28,7 +31,9 @@
         .bg-image {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            /* Direktlänk till bakgrundsbilden */
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
             background-image: url('https://github.com/Jokbt/Bangolf/blob/main/image_96b70a.PNG?raw=true');
             background-size: cover;
             background-position: center;
@@ -38,6 +43,9 @@
         .bg-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
             background: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
@@ -53,13 +61,11 @@
         /* --- STENHÅRDA MINDRE MÅTT FÖR KORTEN --- */
         .card {
             position: absolute;
-            /* Fasta mått som ryms på alla telefoner */
             width: 260px; 
-            height: 440px; 
-            /* Exakt centrering av kortet i mitten av skärmen */
+            height: 520px; /* Ökat från 440px för att göra korten mycket högre */
             top: 50%;
             left: 50%;
-            margin-top: -220px; 
+            margin-top: -260px; /* Måste alltid vara exakt hälften av höjden för att centreras */
             margin-left: -130px; 
             
             background: #2c3e50;
@@ -97,13 +103,11 @@
         }
 
         /* --- SOLFJÄDER LÄGE --- */
-        /* Korten är tajtare, nerskalade och samlade i mitten */
         .wallet-container:not(.has-active) .card[data-index="1"]:not(.front) { transform: translate(-25px, 15px) rotate(-10deg) scale(0.8); z-index: 1; }
         .wallet-container:not(.has-active) .card[data-index="2"]:not(.front) { transform: translate(0, 5px) rotate(0deg) scale(0.8); z-index: 2; }
         .wallet-container:not(.has-active) .card[data-index="3"]:not(.front) { transform: translate(25px, 15px) rotate(10deg) scale(0.8); z-index: 3; }
 
         /* --- FOKUSERAT KORT (Ligger överst i solfjädern) --- */
-        /* Det valda kortet centreras och förstoras kraftigt */
         .wallet-container:not(.has-active) .card.front { 
             transform: translate(0, -10px) rotate(0deg) scale(1.1); 
             z-index: 10; 
@@ -156,7 +160,6 @@
             text-transform: uppercase;
         }
 
-        /* Färg när kortet öppnas */
         .wallet-container.has-active .card.active .card-index, 
         .wallet-container.has-active .card.active .card-title-center {
             color: #1f2937;
@@ -165,7 +168,6 @@
 
         .suit { font-size: 1em; }
 
-        /* Stäng-knapp */
         .close-btn {
             display: none;
             position: absolute;
@@ -245,7 +247,6 @@
             border-bottom: 1px solid #e5e7eb;
         }
 
-        /* Signaturer */
         .signature-row td { border-bottom: none; padding: 10px 5px; text-align: left; }
         .signature-line { display: flex; align-items: flex-end; gap: 5px; margin-bottom: 8px; }
         .signature-label { font-weight: 600; font-size: 0.8rem; }
@@ -273,144 +274,273 @@
     <!-- Korten genereras automatiskt med Javascript -->
 </div>
 
-<script>
-    // --- PWA: Registrerar Service Worker för installation ---
+<!-- Lade till Script som en modul för att hantera molndatabas och lokalt sparande säkert -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // PWA Registrering
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => console.log('ServiceWorker för PWA är registrerad.'))
-                .catch(err => console.log('Fel vid PWA registrering:', err));
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('Fel vid PWA registrering:', err));
         });
     }
 
-    const players = ["Spelare 1", "Spelare 2"];
     const numCourses = 3;
     const numHoles = 18;
 
-    // DIREKTLÄNKAR TILL GITHUB (Bypass av alla sökvägsproblem)
+    // Spelets minne - Här lagras allt du fyller i
+    let gameState = {
+        players: ["Spelare 1", "Spelare 2"],
+        scores: {},
+        signatures: {}
+    };
+
+    // 1. Firebase (Molnsparande ifall appen används inom Canvas-miljön)
+    let db, auth, user;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'bangolf-pwa';
+
+    if (typeof __firebase_config !== 'undefined') {
+        try {
+            const firebaseConfig = JSON.parse(__firebase_config);
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            initAuth();
+
+            onAuthStateChanged(auth, (u) => {
+                if (u) {
+                    user = u;
+                    loadFromFirestore();
+                }
+            });
+        } catch(e) { console.warn("Firebase Init Error", e); }
+    }
+
+    // 2. Offline Sparande (Laddar data via mobilens egen databas när appen är nedladdad från GitHub)
+    loadFromIndexedDB((data) => {
+        if (data) {
+            gameState = data;
+            applyGameState();
+        }
+    });
+
+    // Applicerar all sparad data till webbsidan
+    function applyGameState() {
+        if (!gameState.signatures) gameState.signatures = {};
+
+        gameState.players.forEach((name, p) => {
+            for (let c = 1; c <= numCourses; c++) {
+                const input = document.getElementById(`name_c${c}_p${p}`);
+                if (input) input.value = name;
+            }
+        });
+
+        for (let c = 1; c <= numCourses; c++) {
+            for (let p = 0; p < 2; p++) {
+                for (let h = 1; h <= numHoles; h++) {
+                    const key = `c${c}_p${p}_h${h}`;
+                    const el = document.getElementById(key);
+                    if (el && gameState.scores[key] !== undefined) {
+                        el.value = gameState.scores[key];
+                    }
+                }
+                window.calculateTotal(c, p, false);
+            }
+        }
+
+        for (const [key, val] of Object.entries(gameState.signatures)) {
+            const el = document.getElementById(`sig_${key}`);
+            if (el) el.value = val;
+        }
+    }
+
+    // Sparfunktion (Körs automatiskt när du ändrar en siffra eller bokstav)
+    let saveTimeout;
+    function debounceSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            // Spara lokalt på telefonen (Offline-Stöd)
+            saveToIndexedDB(gameState);
+
+            // Spara i molnet (Om konfigurerat)
+            if (user && db) {
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'gamedata', 'state');
+                setDoc(docRef, gameState).catch(e => console.error("Molnsparande misslyckades", e));
+            }
+        }, 500);
+    }
+
+    // Hjälpfunktioner för telefonens lokala databas (IndexedDB)
+    function saveToIndexedDB(data) {
+        try {
+            const req = indexedDB.open("BangolfDB", 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore("state");
+            req.onsuccess = e => {
+                const idb = e.target.result;
+                if (idb.objectStoreNames.contains("state")) {
+                    const tx = idb.transaction("state", "readwrite");
+                    tx.objectStore("state").put(data, "gamestate");
+                }
+            };
+        } catch(err) { console.warn("Lokal databas fel:", err); }
+    }
+
+    function loadFromIndexedDB(callback) {
+        try {
+            const req = indexedDB.open("BangolfDB", 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore("state");
+            req.onsuccess = e => {
+                const idb = e.target.result;
+                if (!idb.objectStoreNames.contains("state")) return;
+                const tx = idb.transaction("state", "readonly");
+                const store = tx.objectStore("state");
+                const getReq = store.get("gamestate");
+                getReq.onsuccess = () => { if (getReq.result) callback(getReq.result); };
+            };
+        } catch(err) { console.warn("Lokal databas fel:", err); }
+    }
+
+    function loadFromFirestore() {
+        if (!user || !db) return;
+        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'gamedata', 'state');
+        getDoc(docRef).then(docSnap => {
+            if (docSnap.exists()) {
+                gameState = docSnap.data();
+                applyGameState();
+                saveToIndexedDB(gameState); // Synkronisera ner till enheten
+            }
+        });
+    }
+
+    // ----- UI OCH INTERAKTIONER ----- //
+
     const cardImages = [
         "https://github.com/Jokbt/Bangolf/blob/main/image_9718e7.PNG?raw=true", 
         "https://github.com/Jokbt/Bangolf/blob/main/image_971888.PNG?raw=true", 
         "https://github.com/Jokbt/Bangolf/blob/main/image_97155f.PNG?raw=true"  
     ];
 
-    const courseNames = [
-        "MELLBY LINKS",
-        "BÅSTAD PARKLAND",
-        "MALEN SEASIDE"
-    ];
-
+    const courseNames = ["MELLBY LINKS", "BÅSTAD PARKLAND", "MALEN SEASIDE"];
     const walletContainer = document.getElementById('wallet-container');
 
-    // Lyssna på klick var som helst på hela sidan
     document.addEventListener('click', function(e) {
-        // Kontrollera om klicket skedde INUTI ett kort
         const clickedInsideCard = e.target.closest('.card');
-        
-        // Om vi klickade utanför (t.ex. på bakgrunden), stäng korten och avmarkera solfjädern
         if (!clickedInsideCard) {
-            document.querySelectorAll('.card').forEach(c => {
-                c.classList.remove('active', 'front');
-            });
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active', 'front'));
             walletContainer.classList.remove('has-active');
         }
     });
 
-    function activateCard(index, event) {
-        // Stoppar klicket från att bubbla upp till dokumentet och trigga stängningen direkt
+    window.activateCard = function(index, event) {
         if (event) event.stopPropagation();
-
         const card = document.querySelector(`.card[data-index="${index}"]`);
         
-        // Om kortet redan är helt öppet (scorekort visas), gör inget.
         if (card.classList.contains('active')) return;
 
-        // Om kortet INTE ligger överst ("front") i solfjädern, flytta upp det.
         if (!card.classList.contains('front')) {
             document.querySelectorAll('.card').forEach(c => c.classList.remove('front'));
             card.classList.add('front');
-            return; // Avbryt här, vänta på nästa klick för att öppna!
+            return;
         }
 
-        // Om kortet redan ligger överst (.front), ÖPPNA scorekortet.
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         walletContainer.classList.add('has-active');
-    }
+    };
 
-    function closeCards(event) {
+    window.closeCards = function(event) {
         if (event) event.stopPropagation();
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         walletContainer.classList.remove('has-active');
-    }
+    };
 
-    function calculateTotal(courseIndex, playerIndex) {
+    // Updatera värden och Trigga Sparning
+    window.updatePlayerName = function(playerIndex, newName, shouldSave = true) {
+        gameState.players[playerIndex] = newName;
+        for (let c = 1; c <= numCourses; c++) {
+            const input = document.getElementById(`name_c${c}_p${playerIndex}`);
+            if (input && input.value !== newName) input.value = newName;
+        }
+        if (shouldSave) debounceSave();
+    };
+
+    window.updateScore = function(c, p, h, val) {
+        const key = `c${c}_p${p}_h${h}`;
+        if (val) gameState.scores[key] = val;
+        else delete gameState.scores[key];
+        window.calculateTotal(c, p, true);
+    };
+
+    window.updateSignature = function(c, type, val) {
+        gameState.signatures[`c${c}_${type}`] = val;
+        debounceSave();
+    };
+
+    window.calculateTotal = function(courseIndex, playerIndex, shouldSave = true) {
         let total = 0;
         for (let hole = 1; hole <= numHoles; hole++) {
             const val = document.getElementById(`c${courseIndex}_p${playerIndex}_h${hole}`).value;
             if (val) total += parseInt(val);
         }
         document.getElementById(`total_c${courseIndex}_p${playerIndex}`).innerText = total;
-    }
+        if (shouldSave) debounceSave();
+    };
 
-    function updatePlayerName(playerIndex, newName) {
-        for (let c = 1; c <= numCourses; c++) {
-            const input = document.getElementById(`name_c${c}_p${playerIndex}`);
-            if (input && input.value !== newName) {
-                input.value = newName;
-            }
-        }
-    }
-
+    // Bygg upp DOM (Generera scorekorten)
     for (let c = 1; c <= numCourses; c++) {
         const card = document.createElement('div');
         card.className = 'card';
         card.dataset.index = c;
-        
-        // Lägger kort 3 (det översta rent visuellt) i .front-läge från start
-        if (c === 3) {
-            card.classList.add('front');
-        }
+        if (c === 3) card.classList.add('front');
+        card.onclick = (e) => window.activateCard(c, e);
 
-        card.onclick = (e) => activateCard(c, e);
-
-        let tableHTML = `<table>
-            <tr><th>Hål</th>`;
-        
-        players.forEach((p, pIndex) => {
+        let tableHTML = `<table><tr><th>Hål</th>`;
+        gameState.players.forEach((p, pIndex) => {
             tableHTML += `<th>
                 <input type="text" class="player-input" id="name_c${c}_p${pIndex}" value="${p}" 
-                       oninput="updatePlayerName(${pIndex}, this.value)">
+                       oninput="window.updatePlayerName(${pIndex}, this.value)">
             </th>`;
         });
         tableHTML += `</tr>`;
 
         for (let h = 1; h <= numHoles; h++) {
             tableHTML += `<tr><td>${h}</td>`;
-            players.forEach((p, pIndex) => {
+            gameState.players.forEach((p, pIndex) => {
                 tableHTML += `<td>
                     <input type="number" class="score-input" id="c${c}_p${pIndex}_h${h}" min="1" max="7" 
-                           oninput="calculateTotal(${c}, ${pIndex})">
+                           oninput="window.updateScore(${c}, ${pIndex}, ${h}, this.value)">
                 </td>`;
             });
             tableHTML += `</tr>`;
         }
 
         tableHTML += `<tr class="total-row"><td>S:a</td>`;
-        players.forEach((p, pIndex) => {
+        gameState.players.forEach((p, pIndex) => {
             tableHTML += `<td id="total_c${c}_p${pIndex}">0</td>`;
         });
         
         tableHTML += `
             <tr class="signature-row">
-                <td colspan="${players.length + 1}">
+                <td colspan="${gameState.players.length + 1}">
                     <div class="signature-line">
                         <span class="signature-label">Spelare:</span>
-                        <input type="text" class="signature-input" placeholder="">
+                        <input type="text" class="signature-input" id="sig_c${c}_player" placeholder=""
+                               oninput="window.updateSignature(${c}, 'player', this.value)">
                     </div>
                     <div class="signature-line">
                         <span class="signature-label">Markör:</span>
-                        <input type="text" class="signature-input" placeholder="">
+                        <input type="text" class="signature-input" id="sig_c${c}_marker" placeholder=""
+                               oninput="window.updateSignature(${c}, 'marker', this.value)">
                     </div>
                 </td>
             </tr>
@@ -418,24 +548,11 @@
 
         card.innerHTML = `
             <img class="card-img" src="${cardImages[c-1]}" alt="Bana ${c}" onerror="this.style.display='none'">
-            
-            <button class="close-btn" onclick="closeCards(event)" aria-label="Stäng">✕</button>
-            
-            <div class="card-index top-left">
-                <span>${c}</span>
-                <span class="suit">⛳</span>
-            </div>
-            
+            <button class="close-btn" onclick="window.closeCards(event)" aria-label="Stäng">✕</button>
+            <div class="card-index top-left"><span>${c}</span><span class="suit">⛳</span></div>
             <div class="card-title-center">${courseNames[c-1]}</div>
-            
-            <div class="card-index bottom-right">
-                <span>${c}</span>
-                <span class="suit">⛳</span>
-            </div>
-
-            <div class="card-content" onclick="event.stopPropagation()">
-                ${tableHTML}
-            </div>
+            <div class="card-index bottom-right"><span>${c}</span><span class="suit">⛳</span></div>
+            <div class="card-content" onclick="event.stopPropagation()">${tableHTML}</div>
         `;
         walletContainer.appendChild(card);
     }
@@ -444,23 +561,16 @@
     let touchStartX = 0;
     let touchEndX = 0;
 
-    document.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, {passive: true});
-
+    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
     document.addEventListener('touchend', e => {
         touchEndX = e.changedTouches[0].screenX;
         handleSwipe();
     }, {passive: true});
 
     function handleSwipe() {
-        const swipeThreshold = 60; // Tröskel för hur långt fingret måste dras (i pixlar)
         const diff = touchStartX - touchEndX;
+        if (Math.abs(diff) < 60) return;
 
-        // Ignorera om svepet var för kort (förhindrar att vanliga klick misstolkas)
-        if (Math.abs(diff) < swipeThreshold) return;
-
-        // Hitta vilket kort som är i fokus (antingen helt öppet eller upplyft i solfjädern)
         let currentCard = document.querySelector('.card.active');
         let isFullyOpen = true;
 
@@ -472,23 +582,15 @@
         let currentIndex = currentCard ? parseInt(currentCard.getAttribute('data-index')) : 0;
         let nextIndex = currentIndex;
 
-        if (diff > 0) {
-            // Svep Vänster -> Byt till NÄSTA kort
-            nextIndex = currentCard ? (currentIndex % numCourses) + 1 : 1;
-        } else {
-            // Svep Höger -> Byt till FÖREGÅENDE kort
+        if (diff > 0) nextIndex = currentCard ? (currentIndex % numCourses) + 1 : 1;
+        else {
             nextIndex = currentCard ? currentIndex - 1 : numCourses;
             if (nextIndex < 1) nextIndex = numCourses;
         }
 
         const nextCard = document.querySelector(`.card[data-index="${nextIndex}"]`);
-        
-        // Återställ först alla kort till sina standardlägen
-        document.querySelectorAll('.card').forEach(c => {
-            c.classList.remove('active', 'front');
-        });
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active', 'front'));
 
-        // Applicera rätt läge på det nya kortet beroende på vad vi gjorde
         if (isFullyOpen && currentCard) {
             nextCard.classList.add('active');
             walletContainer.classList.add('has-active');
