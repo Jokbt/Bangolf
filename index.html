@@ -62,10 +62,10 @@
         .card {
             position: absolute;
             width: 260px; 
-            height: 520px; /* Ökat från 440px för att göra korten mycket högre */
-            top: 50%;
+            height: 500px; /* Minskad från 520px till 500px */
+            top: 46%; /* Ändrad från 50% för att lyfta hela leken lite mer centriskt */
             left: 50%;
-            margin-top: -260px; /* Måste alltid vara exakt hälften av höjden för att centreras */
+            margin-top: -250px; /* Justerad för att vara exakt hälften av 500px */
             margin-left: -130px; 
             
             background: #2c3e50;
@@ -109,14 +109,14 @@
 
         /* --- FOKUSERAT KORT (Ligger överst i solfjädern) --- */
         .wallet-container:not(.has-active) .card.front { 
-            transform: translate(0, -10px) rotate(0deg) scale(1.1); 
+            transform: translate(0, -15px) rotate(0deg) scale(1.1); /* Lyfte upp kortet 5px extra */
             z-index: 10; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.8); 
         }
 
         /* --- AKTIVT KORT (Scorekort öppet) --- */
         .wallet-container.has-active .card.active {
-            transform: translate(0, -10px) scale(1.1);
+            transform: translate(0, -15px) scale(1.1); /* Lyfte upp scorekortet 5px extra */
             z-index: 20;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             cursor: default;
